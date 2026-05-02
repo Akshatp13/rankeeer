@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+.git/
+*.log
+.env
+vendor/
+__pycache__/
+.pytest_cache/
+coverage/
