@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import { 
@@ -33,12 +33,39 @@ const itemVariants = {
 const WeaknessDetection = () => {
   const { user, token } = useSelector(s => s.auth);
   const { results, weakTopics, subjectStats } = useSelector(s => s.testResults);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const selectedExam = user?.selectedExam || null;
   const examObj = EXAMS.find(e => e.id === selectedExam);
 
   const [aiAnalysis, setAiAnalysis] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
+  const [fetchingHistory, setFetchingHistory] = useState(false);
+
+  const fetchHistory = async () => {
+    if (!token) return;
+    setFetchingHistory(true);
+    try {
+      const { data } = await api.get('/api/stats/history');
+      
+      const mappedData = data.map(r => ({
+        ...r,
+        date: r.created_at,
+        timeTaken: r.time_taken
+      }));
+
+      dispatch({ type: 'testResults/setResults', payload: mappedData });
+      dispatch({ type: 'testResults/computeWeakTopics' });
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
+    } finally {
+      setFetchingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (results.length === 0) fetchHistory();
+  }, [token]);
 
   // Compute Overall Readiness
   const avgAccuracy = results.length > 0 
@@ -54,12 +81,13 @@ const WeaknessDetection = () => {
   const handleGetAIAnalysis = async () => {
     setAnalyzing(true);
     try {
-      const { data } = await axios.post('/api/ai/detect-weakness', {
+      const { data } = await api.post('/api/ai/detect-weakness', {
         weakTopics,
         subjectStats,
-        selectedExam: examObj?.name || selectedExam,
+        selectedExam,
         totalTests: results.length
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
+
       setAiAnalysis(data.analysis);
     } catch (err) {
       setAiAnalysis('Neural decryption failed. Matrix re-synchronization required.');
@@ -69,6 +97,18 @@ const WeaknessDetection = () => {
   };
 
   // ── EMPTY STATE ────────────────────────────────────────────────────────────
+  if (fetchingHistory) {
+    return (
+      <div className="min-h-screen">
+        <Topbar /><Sidebar />
+        <main className="pl-72 pt-28 p-8 flex flex-col items-center justify-center min-h-[80vh]">
+          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <p className="mt-4 text-slate-500 font-black uppercase tracking-widest text-xs">Synchronizing Neural History...</p>
+        </main>
+      </div>
+    );
+  }
+
   if (results.length === 0) {
     return (
       <div className="min-h-screen">

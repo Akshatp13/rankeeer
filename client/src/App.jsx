@@ -13,6 +13,7 @@ import ExamSimulator from './pages/ExamSimulator';
 import Settings from './pages/Settings';
 import Chat from './pages/Chat';
 import ExamCatalog from './pages/ExamCatalog';
+import AuthCallback from './pages/AuthCallback';
 import { ThemeProvider } from './context/ThemeContext';
 
 const PrivateRoute = ({ children }) => {
@@ -51,6 +52,7 @@ const AnimatedRoutes = () => {
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
         <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
+        <Route path="/auth/callback" element={<PageWrapper><AuthCallback /></PageWrapper>} />
 
         {/* Onboarding */}
         <Route path="/exam-catalog" element={<PrivateRoute><PageWrapper><ExamCatalog /></PageWrapper></PrivateRoute>} />

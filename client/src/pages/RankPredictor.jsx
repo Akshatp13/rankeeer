@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import { TrendingUp, AlertCircle, Loader2, Target, BarChart3, Sparkles } from 'lucide-react';
@@ -67,12 +67,12 @@ const RankPredictor = () => {
     setAnalysisHTML('');
     try {
       const totalScore = Object.values(scores).reduce((sum, v) => sum + (parseFloat(v) || 0), 0);
-      const { data } = await axios.post('/api/ai/analyze-exam', {
+      const { data } = await api.post('/api/ai/analyze-exam', {
         score: totalScore,
         total: fields.length * 100,
         scores,
         selectedExam: examObj?.name || selectedExam,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       setAnalysisHTML(data.analysisHTML);
     } catch (err) {
       setError(err.response?.data?.error || 'Neural computation failed. Please re-synchronize.');

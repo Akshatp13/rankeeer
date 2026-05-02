@@ -8,7 +8,8 @@ import {
   generateTestFromNotes,
   detectWeakness,
   generateRevisionSheet,
-  reviseFromNotes
+  reviseFromNotes,
+  submitTest
 } from '../controllers/aiController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -23,5 +24,6 @@ router.post('/generate-test-from-notes', protect, generateTestFromNotes);
 router.post('/detect-weakness', protect, detectWeakness);
 router.post('/generate-revision-sheet', protect, generateRevisionSheet);
 router.post('/revise-from-notes', protect, reviseFromNotes);
+router.post('/submit-test', protect, submitTest);
 
 export default router;

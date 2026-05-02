@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Bot, User, Sparkles, ExternalLink, Brain } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import { useDispatch, useSelector } from 'react-redux';
 import { addMessage } from '../redux/chatSlice';
 import { Link } from 'react-router-dom';
@@ -37,11 +37,11 @@ const AIChat = () => {
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
 
-      const { data } = await axios.post('/api/ai/chat', {
+      const { data } = await api.post('/api/ai/chat', {
         message: text,
         history: [...history, { role: 'user', content: text }],
         selectedExam,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
 
       dispatch(addMessage({ role: 'assistant', content: data.reply, source: 'mentor' }));
     } catch (err) {

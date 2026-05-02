@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import ConversationSidebar from '../components/ConversationSidebar';
 import { Send, Bot, User } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import { addMessage } from '../redux/chatSlice';
 
 const SOURCE_BADGE = {
@@ -42,10 +42,10 @@ const Chat = () => {
       // Build history from current conversation for context
       const history = messages.map(m => ({ role: m.role, content: m.content }));
 
-      const { data } = await axios.post('/api/chat/message', {
+      const { data } = await api.post('/api/chat/message', {
         messages: [...history, { role: 'user', content: text }],
         conversationId: activeConversationId,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
 
       dispatch(addMessage({ role: 'assistant', content: data.reply, source: 'chat' }));
     } catch (err) {

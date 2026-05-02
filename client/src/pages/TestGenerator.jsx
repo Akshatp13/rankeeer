@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import { 
@@ -17,7 +17,7 @@ import { addTestResult, computeWeakTopics } from '../redux/testResultsSlice';
 // ─── File extraction helpers ─────────────────────────────────────────────────
 const extractPdfText = async (file) => {
   const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
   const ab = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
   let text = '';
@@ -126,7 +126,7 @@ const TestGenerator = () => {
     setScreen(SCREEN.LOADING);
     try {
       setLoadStep('🧠 Synthesizing Neural Matrix...');
-      const { data } = await axios.post('/api/ai/generate-test-from-notes', {
+      const { data } = await api.post('/api/ai/generate-test-from-notes', {
         notesText: notesText || undefined,
         notesImage: notesImage || undefined,
         mimeType: notesMime || undefined,
@@ -135,7 +135,7 @@ const TestGenerator = () => {
         questionType: notesQType,
         focusArea: notesFocus,
         selectedExam: examObj?.name || selectedExam || undefined,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       setLoadStep('✅ Synchronized!');
       const test = data.test;
       test._extractedText = data.extractedText;
@@ -170,29 +170,48 @@ const TestGenerator = () => {
   };
 
   useEffect(() => {
-    if (screen === SCREEN.RESULTS && testData && !testData._dispatched) {
-      const r = calcResults();
-      const timeTaken = (testData.duration || numQuestions * 1.5) * 60 - timeLeft;
-      dispatch(addTestResult({
-        source: "ai-test",
-        exam: user.selectedExam,
-        subject: testData.subject || subject,
-        score: r.score,
-        accuracy: r.accuracy,
-        timeTaken: timeTaken,
-        questions: testData.questions.map((q, i) => ({
-          id: q.id || i,
-          topic: q.topic,
+    const persistResult = async () => {
+      if (screen === SCREEN.RESULTS && testData && !testData._dispatched) {
+        const r = calcResults();
+        const timeTaken = (testData.duration || numQuestions * 1.5) * 60 - timeLeft;
+        
+        // Local state update
+        dispatch(addTestResult({
+          source: "ai-test",
+          exam: user.selectedExam,
           subject: testData.subject || subject,
-          userAnswer: userAnswers[i] ?? null,
-          correct: q.correct,
-          isCorrect: userAnswers[i] === q.correct,
-        })),
-        topicBreakdown: computeTopicBreakdown(testData.questions, userAnswers),
-      }));
-      dispatch(computeWeakTopics());
-      setTestData(prev => ({ ...prev, _dispatched: true }));
-    }
+          score: r.score,
+          accuracy: r.accuracy,
+          timeTaken: timeTaken,
+          questions: testData.questions.map((q, i) => ({
+            id: q.id || i,
+            topic: q.topic,
+            subject: testData.subject || subject,
+            userAnswer: userAnswers[i] ?? null,
+            correct: q.correct,
+            isCorrect: userAnswers[i] === q.correct,
+          })),
+          topicBreakdown: computeTopicBreakdown(testData.questions, userAnswers),
+        }));
+        dispatch(computeWeakTopics());
+
+        // Database persistence
+        try {
+          await api.post('/api/ai/submit-test', {
+            exam: user.selectedExam,
+            subject: testData.subject || subject,
+            score: r.correct, // Using raw correct count for the score calculation in backend
+            total: testData.questions.length,
+            timeTaken: timeTaken
+          });
+        } catch (err) {
+          console.error('Failed to persist test result to DB:', err);
+        }
+
+        setTestData(prev => ({ ...prev, _dispatched: true }));
+      }
+    };
+    persistResult();
   }, [screen]);
 
   const formatTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -201,10 +220,10 @@ const TestGenerator = () => {
     setError(''); setLoadStep('🚀 Initializing Neural Forge...');
     setScreen(SCREEN.LOADING);
     try {
-      const { data } = await axios.post('/api/ai/generate-test', {
+      const { data } = await api.post('/api/ai/generate-test', {
         selectedExam: examObj?.name || 'General',
         subject, difficulty, numQuestions,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       setTestData(data);
       setCurrentQ(0);
       setUserAnswers({});

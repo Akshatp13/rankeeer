@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import { 
@@ -91,11 +91,11 @@ const ExamSimulator = () => {
     setError('');
     setScreen(SCREEN.LOADING);
     try {
-      const { data } = await axios.post('/api/ai/generate-mock', {
+      const { data } = await api.post('/api/ai/generate-mock', {
         selectedExam: examObj?.name || 'General',
         subject: selectedSection,
         numQuestions,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       setMockData(data);
       setActiveQ(0);
       setAnswers({});
@@ -150,29 +150,48 @@ const ExamSimulator = () => {
   };
 
   useEffect(() => {
-    if (screen === SCREEN.RESULTS && mockData && !mockData._dispatched) {
-      const r = calcScore();
-      const timeTaken = (mockData.duration || config.duration) * 60 - timeLeft;
-      dispatch(addTestResult({
-        source: "mock",
-        exam: user.selectedExam,
-        subject: "Full Mock",
-        score: r.raw,
-        accuracy: r.accuracy,
-        timeTaken: timeTaken,
-        questions: mockData.questions.map((q, i) => ({
-          id: q.id || i,
-          topic: q.topic,
-          subject: q.subject || 'Mixed',
-          userAnswer: answers[i] ?? null,
-          correct: q.correct,
-          isCorrect: answers[i] === q.correct,
-        })),
-        topicBreakdown: computeTopicBreakdown(mockData.questions, answers),
-      }));
-      dispatch(computeWeakTopics());
-      setMockData(prev => ({ ...prev, _dispatched: true }));
-    }
+    const persistResult = async () => {
+      if (screen === SCREEN.RESULTS && mockData && !mockData._dispatched) {
+        const r = calcScore();
+        const timeTaken = (mockData.duration || config.duration) * 60 - timeLeft;
+        
+        // Local state update
+        dispatch(addTestResult({
+          source: "mock",
+          exam: user.selectedExam,
+          subject: "Full Mock",
+          score: r.raw,
+          accuracy: r.accuracy,
+          timeTaken: timeTaken,
+          questions: mockData.questions.map((q, i) => ({
+            id: q.id || i,
+            topic: q.topic,
+            subject: q.subject || 'Mixed',
+            userAnswer: answers[i] ?? null,
+            correct: q.correct,
+            isCorrect: answers[i] === q.correct,
+          })),
+          topicBreakdown: computeTopicBreakdown(mockData.questions, answers),
+        }));
+        dispatch(computeWeakTopics());
+
+        // Database persistence
+        try {
+          await api.post('/api/ai/submit-test', {
+            exam: user.selectedExam,
+            subject: "Full Mock",
+            score: r.correct, // Using raw correct count for consistency in backend calc
+            total: mockData.questions.length,
+            timeTaken: timeTaken
+          });
+        } catch (err) {
+          console.error('Failed to persist mock result to DB:', err);
+        }
+
+        setMockData(prev => ({ ...prev, _dispatched: true }));
+      }
+    };
+    persistResult();
   }, [screen]);
 
   const handleAnalyzeExam = async () => {
@@ -181,13 +200,13 @@ const ExamSimulator = () => {
     try {
       const r = calcScore();
       const timeTaken = formatTime((mockData.duration || config.duration) * 60 - timeLeft);
-      const { data } = await axios.post('/api/ai/analyze-exam', {
+      const { data } = await api.post('/api/ai/analyze-exam', {
         score: r.correct,
         total: mockData?.questions?.length || numQuestions,
         timeTaken,
         selectedExam: examObj?.name || selectedExam,
         scores: { Correct: r.correct, Wrong: r.wrong, Skipped: r.skipped, 'Raw Score': r.raw },
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       setAnalysisHTML(data.analysisHTML);
     } catch (err) {
       setAnalysisHTML('<p class="text-rose-400">Failed to generate AI analysis. Link unstable.</p>');
@@ -429,6 +448,7 @@ const ExamSimulator = () => {
                 <Activity size={48} />
               </motion.div>
               <h1 className="text-5xl font-black text-white tracking-tighter uppercase mb-2">Simulation Terminated</h1>
+              <p className="text-emerald-500 font-black uppercase tracking-[0.3em] text-sm mb-4 animate-pulse">Thank you for giving the test!</p>
               <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[10px] mb-12">{mockData.title} · Sector {selectedSection}</p>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-12">

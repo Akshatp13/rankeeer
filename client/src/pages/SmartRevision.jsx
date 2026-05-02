@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import { 
@@ -30,6 +30,27 @@ const itemVariants = {
     transition: { duration: 0.5, ease: [0.23, 1, 0.32, 1] }
   }
 };
+
+// ─── File extraction helpers ─────────────────────────────────────────────────
+const extractPdfText = async (file) => {
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  const ab = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(' ') + '\n';
+  }
+  return text;
+};
+
+const toBase64 = (file) => new Promise(resolve => {
+  const r = new FileReader();
+  r.onload = () => resolve(r.result.split(',')[1]);
+  r.readAsDataURL(file);
+});
 
 const SmartRevision = () => {
   const { user, token, weakTopics } = useSelector(s => s.auth);
@@ -67,14 +88,17 @@ const SmartRevision = () => {
   const handleGeneratePlan = async () => {
     setLoading(true); setError('');
     try {
-      const { data } = await axios.post('/api/ai/generate-study-plan', {
+      const { data } = await api.post('/api/ai/study-plan', {
         hoursPerDay: planHours,
         daysUntilExam: planDays,
         weakTopics: weakTopics,
         selectedExam: examObj?.name
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       setStudyPlan(data);
-    } catch (err) { setError('Neural engine failed to compute plan.'); }
+    } catch (err) { 
+      console.error(err);
+      setError('Neural engine failed to compute plan.'); 
+    }
     finally { setLoading(false); }
   };
 
@@ -82,27 +106,64 @@ const SmartRevision = () => {
     if (!revTopic) return;
     setLoading(true); setError('');
     try {
-      const { data } = await axios.post('/api/ai/generate-revision-sheet', {
+      const { data } = await api.post('/api/ai/generate-revision-sheet', {
         topic: revTopic,
         subject: '',
         selectedExam: examObj?.name
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       setRevisionSheet(data.sheetHTML);
     } catch (err) { setError('Neural link error in sheet generation.'); }
     finally { setLoading(false); }
   };
 
   const handleReviseNotes = async (file) => {
+    if (!file) return;
     setLoading(true); setError('');
     try {
-      const text = await file.text();
-      const { data } = await axios.post('/api/ai/revise-from-notes', {
-        notesText: text,
+      const ext = file.name.split('.').pop().toLowerCase();
+      let notesText = '';
+      let notesImage = null;
+      let mimeType = file.type;
+
+      if (ext === 'txt') {
+        notesText = await file.text();
+      } else if (ext === 'pdf') {
+        notesText = await extractPdfText(file);
+      } else if (['png', 'jpg', 'jpeg'].includes(ext)) {
+        notesImage = await toBase64(file);
+      } else {
+        throw new Error('Unsupported file format');
+      }
+
+      const { data } = await api.post('/api/ai/revise-from-notes', {
+        notesText: notesText || undefined,
+        notesImage: notesImage || undefined,
+        mimeType: mimeType || undefined,
         selectedExam: examObj?.name
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      });
       setNotesData(data);
     } catch (err) { setError('Failed to decrypt notes node.'); }
     finally { setLoading(false); }
+  };
+
+  const addToSpaced = (topic) => {
+    if (spacedSchedule.some(s => s.topic === topic)) return;
+    const newEntry = {
+      topic,
+      subject: examObj?.name || 'General',
+      repetitions: 1,
+      nextRevisionDate: new Date(Date.now() + 86400000).toLocaleDateString(),
+      id: Date.now()
+    };
+    const updated = [...spacedSchedule, newEntry];
+    setSpacedSchedule(updated);
+    localStorage.setItem('spacedSchedule', JSON.stringify(updated));
+  };
+
+  const removeFromSpaced = (id) => {
+    const updated = spacedSchedule.filter(s => s.id !== id);
+    setSpacedSchedule(updated);
+    localStorage.setItem('spacedSchedule', JSON.stringify(updated));
   };
 
   return (
@@ -405,9 +466,14 @@ const SmartRevision = () => {
                            </div>
                            <h2 className="text-3xl font-black text-white tracking-tighter uppercase">{revTopic}</h2>
                         </div>
-                        <button className="flex items-center gap-2 text-[10px] font-black text-slate-500 hover:text-white transition-all uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/5">
-                          <Download size={14} /> Export Node
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => addToSpaced(revTopic)} className="flex items-center gap-2 text-[10px] font-black text-primary hover:text-white transition-all uppercase tracking-widest bg-primary/10 px-4 py-2 rounded-full border border-primary/20">
+                            <Sparkles size={14} /> Add to Spaced Sync
+                          </button>
+                          <button className="flex items-center gap-2 text-[10px] font-black text-slate-500 hover:text-white transition-all uppercase tracking-widest bg-white/5 px-4 py-2 rounded-full border border-white/5">
+                            <Download size={14} /> Export Node
+                          </button>
+                        </div>
                       </div>
                       <div className="prose prose-invert max-w-none prose-h3:text-primary prose-h3:font-black prose-h3:uppercase prose-h3:tracking-widest prose-h3:text-sm prose-h3:mt-10" dangerouslySetInnerHTML={{ __html: revisionSheet }} />
                     </motion.div>
@@ -457,8 +523,8 @@ const SmartRevision = () => {
                                  </div>
                                </div>
                                <div className="flex gap-3">
-                                 <button className="p-4 bg-rose-500/5 border border-rose-500/10 text-rose-500 rounded-2xl hover:bg-rose-500/10 transition-all"><Trash2 size={20} /></button>
-                                 <FuturisticButton className="px-10">Start Sync</FuturisticButton>
+                                 <button onClick={() => removeFromSpaced(item.id)} className="p-4 bg-rose-500/5 border border-rose-500/10 text-rose-500 rounded-2xl hover:bg-rose-500/10 transition-all"><Trash2 size={20} /></button>
+                                 <FuturisticButton onClick={() => { setRevTopic(item.topic); setActiveMode(MODES.TOPIC); handleTopicRevision(); }} className="px-10">Start Sync</FuturisticButton>
                                </div>
                              </motion.div>
                           ))}

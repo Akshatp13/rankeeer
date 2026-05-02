@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { setSelectedExam } from '../redux/authSlice';
-import axios from 'axios';
+import api from '../utils/api';
 import {
   FlaskConical, HeartPulse, Landmark, TrendingUp, Cpu,
   Shield, Briefcase, Scale, GraduationCap, Train, Building2, Calculator, CheckCircle2, ArrowRight,
@@ -58,9 +58,7 @@ const ExamCatalog = ({ isModal = false, onClose, onSaved }) => {
     setSaving(true);
     try {
       if (token) {
-        await axios.put('/api/auth/exam-preference', { selectedExam: selected }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        await api.put('/api/auth/exam-preference', { selectedExam: selected });
       }
       dispatch(setSelectedExam(selected));
       if (isModal) {

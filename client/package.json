@@ -13,6 +13,7 @@
     "@react-three/drei": "^9.102.0",
     "@react-three/fiber": "^8.16.1",
     "@reduxjs/toolkit": "^2.2.3",
+    "@supabase/supabase-js": "^2.105.1",
     "axios": "^1.6.8",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.372.0",

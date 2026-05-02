@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../redux/authSlice';
-import axios from 'axios';
+import api from '../utils/api';
 import { Brain, User, Mail, Lock, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Button from '../components/FuturisticButton';
@@ -13,6 +13,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -22,7 +23,14 @@ const Register = () => {
     setLoading(true);
     setError('');
     try {
-      const { data } = await axios.post('/api/auth/register', { name, email, password });
+      const { data } = await api.post('/api/auth/register', { name, email, password });
+
+      // Supabase email confirmation is enabled — show success message
+      if (data.needsConfirmation) {
+        setSuccess(data.message);
+        return;
+      }
+
       dispatch(loginSuccess({ user: { id: data._id, name: data.name, email: data.email, isNewUser: true }, token: data.token }));
       navigate('/exam-catalog');
     } catch (err) {
@@ -54,6 +62,12 @@ const Register = () => {
           {error && (
             <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg mb-6 text-sm font-medium">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 text-green-700 dark:text-green-400 p-4 rounded-lg mb-6 text-sm font-medium">
+              ✅ {success}
             </div>
           )}
 

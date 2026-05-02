@@ -79,9 +79,12 @@ const testResultsSlice = createSlice({
       state.results = [];
       state.weakTopics = [];
       state.subjectStats = {};
+    },
+    setResults: (state, action) => {
+      state.results = action.payload;
     }
   }
 });
 
-export const { addTestResult, computeWeakTopics, clearResults } = testResultsSlice.actions;
+export const { addTestResult, computeWeakTopics, clearResults, setResults } = testResultsSlice.actions;
 export default testResultsSlice.reducer;

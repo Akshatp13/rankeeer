@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import crypto from 'crypto';
+import { updateXP } from './statsController.js';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -43,6 +44,11 @@ export const sendMessage = async (req, res) => {
     });
 
     const reply = completion.choices[0].message.content;
+
+    // Update XP for chat session (small reward)
+    if (req.user) {
+      await updateXP(req.user.id, 10, 'chat', 'Chatted with AI assistant');
+    }
 
     res.json({
       reply,

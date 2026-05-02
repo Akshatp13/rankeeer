@@ -1,4 +1,7 @@
 import Groq from 'groq-sdk';
+import { supabase } from '../config/supabase.js';
+import { updateXP } from './statsController.js';
+import { sendTestResultEmail } from '../utils/emailService.js';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -95,7 +98,11 @@ Return ONLY valid JSON in this exact format:
     const raw = completion.choices[0].message.content.trim()
       .replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '');
     
-    res.json(JSON.parse(raw));
+    const planData = JSON.parse(raw);
+    res.json(planData);
+
+    // Award XP for creating a study plan
+    await updateXP(req.user.id, 100, 'revision', `Generated a ${daysUntilExam}-day study plan for ${selectedExam || 'exam'}`);
   } catch (err) {
     console.error("Groq study plan error:", err.message);
     res.status(500).json({ error: err.message || "Failed to generate study plan" });
@@ -178,6 +185,9 @@ Format in clean HTML (h3, p, ul, li, strong). No markdown code blocks.`;
     });
 
     res.json({ sheetHTML: completion.choices[0].message.content });
+    
+    // Update XP for revision
+    await updateXP(req.user.id, 50, 'revision', `Revised ${topic} in ${subject}`);
   } catch (err) {
     console.error("Revision sheet error:", err.message);
     res.status(500).json({ error: err.message || "Failed to generate revision sheet" });
@@ -232,7 +242,11 @@ Return ONLY valid JSON:
     const raw = completion.choices[0].message.content.trim()
       .replace(/^```json\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '');
     
-    res.json(JSON.parse(raw));
+    const result = JSON.parse(raw);
+    res.json(result);
+
+    // Award XP for revising from notes
+    await updateXP(req.user.id, 75, 'revision', `Synthesized study nodes from uploaded data packets`);
   } catch (err) {
     console.error("Revise from notes error:", err.message);
     res.status(500).json({ error: err.message || "Failed to revise from notes" });
@@ -464,5 +478,59 @@ Return ONLY valid JSON, no extra text:
   } catch (err) {
     console.error("Groq mock exam error:", err.message);
     res.status(500).json({ error: err.message || "Failed to generate mock exam" });
+  }
+};
+
+export const submitTest = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { exam, subject, score, total, timeTaken } = req.body;
+    
+    const accuracy = Math.round((score / total) * 100);
+    
+    // 1. Save test result
+    const { data, error } = await supabase
+      .from('test_results')
+      .insert([{
+        user_id: userId,
+        exam,
+        subject,
+        score,
+        total,
+        accuracy,
+        time_taken: timeTaken
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 2. Award XP based on score percentage
+    const xpAwarded = Math.floor((score / total) * 200); // Max 200 XP per test
+    await updateXP(userId, xpAwarded, 'test', `Completed ${subject} test with ${accuracy}% accuracy`);
+
+    // 3. Update total tests and avg score in user_stats
+    const { data: stats } = await supabase.from('user_stats').select('total_tests, average_score').eq('user_id', userId).single();
+    const newTotal = (stats?.total_tests || 0) + 1;
+    const newAvg = stats?.average_score ? ((stats.average_score * stats.total_tests) + accuracy) / newTotal : accuracy;
+
+    await supabase.from('user_stats').update({
+      total_tests: newTotal,
+      average_score: Math.round(newAvg)
+    }).eq('user_id', userId);
+
+    // Send test result email (async)
+    sendTestResultEmail(req.user.email, req.user.user_metadata?.name || 'Student', {
+      exam,
+      subject,
+      score,
+      total,
+      accuracy,
+      xpEarned: xpAwarded
+    });
+
+    res.json({ success: true, xpEarned: xpAwarded, result: data });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
