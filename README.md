@@ -32,7 +32,7 @@ RankRise AI is a next-generation, AI-driven command center designed for competit
    ```
 
 2. **Backend Setup:**
-   - Go to `server/`
+   - Go to `backend/`
    - Create a `.env` file and add:
      ```env
      PORT=5000
@@ -43,7 +43,7 @@ RankRise AI is a next-generation, AI-driven command center designed for competit
    - Run `npm install` and `npm start`.
 
 3. **Frontend Setup:**
-   - Go to `client/`
+   - Go to `frontend/`
    - Run `npm install` and `npm run dev`.
 
 ## 🛡️ Security

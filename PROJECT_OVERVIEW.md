@@ -18,7 +18,7 @@
 
 ## 2. Tech Stack
 
-### Frontend (client/)
+### Frontend (frontend/)
 | Layer | Technology |
 |-------|-----------|
 | Framework | React 18 (Vite) |
@@ -32,7 +32,7 @@
 | PDF Support | pdfjs-dist |
 | HTTP Client | Axios |
 
-### Backend (server/)
+### Backend (backend/)
 | Layer | Technology |
 |-------|-----------|
 | Runtime | Node.js (ESM modules) |
@@ -44,7 +44,7 @@
 
 ---
 
-## 3. Environment Variables (server/.env)
+## 3. Environment Variables (backend/.env)
 
 ```
 PORT=5000
@@ -59,7 +59,7 @@ GROQ_API_KEY=your_groq_api_key_here
 
 ```
 Rank_rise_ai/
-├── client/                        # React frontend (Vite)
+├── frontend/                        # React frontend (Vite)
 │   ├── src/
 │   │   ├── App.jsx                # Root — routing + auth guards
 │   │   ├── main.jsx               # React DOM entry point
@@ -95,7 +95,7 @@ Rank_rise_ai/
 │   ├── tailwind.config.js
 │   └── package.json
 │
-├── server/                        # Node.js + Express backend
+├── backend/                        # Node.js + Express backend
 │   ├── server.js                  # Express app entry — mounts all routes
 │   ├── .env                       # Environment variables (not committed)
 │   ├── config/
