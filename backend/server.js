@@ -7,8 +7,29 @@ import chatRoutes from './routes/chatRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// CORS — allow frontend origin (set FRONTEND_URL in Railway env vars)
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json({ limit: '10mb' }));
 
 // Routes
 app.get('/', (req, res) => {
