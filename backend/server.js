@@ -8,20 +8,15 @@ import statsRoutes from './routes/statsRoutes.js';
 
 const app = express();
 
-// CORS — allow frontend origin (set FRONTEND_URL in Railway env vars)
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5173',
-  process.env.FRONTEND_URL,
-].filter(Boolean);
-
+// CORS — allow all localhost in dev, and FRONTEND_URL in production
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl)
+    // Allow requests with no origin (Postman, curl, mobile)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+    // Allow any localhost port in development
+    if (origin.match(/^http:\/\/localhost:\d+$/)) return callback(null, true);
+    // Allow production frontend URL from env
+    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) return callback(null, true);
     return callback(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
