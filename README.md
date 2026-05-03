@@ -1,53 +1,110 @@
-# RankRise AI - Neural Exam Intelligence 🧠⚡
+# RankRise AI 🚀
 
-![RankRise AI Banner](file:///C:/Users/ADMIN/.gemini/antigravity/brain/f127ba9e-cb6a-4488-918c-d8c38f43f720/rankrise_ai_banner_1777659025364.png)
-
-### Created by: **Team Tech Titans** 🛡️
-
-RankRise AI is a next-generation, AI-driven command center designed for competitive exam aspirants. It goes beyond simple mock tests by using neural analysis to extract logic, identify cognitive gaps, and generate personalized revision protocols.
-
-## 🚀 Key Features
-
-- **Neural Command Center (Dashboard):** Real-time tracking of cognitive growth curves and matrix rank projection.
-- **Simulation Deck (Exam Simulator):** High-fidelity synthetic mocks with quantum-level performance analysis.
-- **Logic Extraction:** AI-powered weakness detection that parses results to find exact neural weak-points.
-- **Synthetic Revision:** Dynamically generated daily protocols targeting critical data gaps.
-- **Neural Forge:** Instantly transform static PDFs into interactive MCQ data packets.
-- **AI Mentor:** 24/7 intelligent assistant for complex topic consultation.
-
-## 🛠️ Tech Stack
-
-- **Frontend:** React.js, Tailwind CSS, Framer Motion (Animations), Recharts.
-- **Backend:** Node.js, Express.js.
-- **Database & Auth:** Supabase (PostgreSQL).
-- **AI Engine:** Groq AI / xAI (Grok-1).
-- **Styling:** Glassmorphism, Futuristic Cyber-theme.
-
-## 📦 Installation & Setup
-
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/tech-titans/rankrise-ai.git
-   cd rankrise-ai
-   ```
-
-2. **Backend Setup:**
-   - Go to `backend/`
-   - Create a `.env` file and add:
-     ```env
-     PORT=5000
-     SUPABASE_URL=your_supabase_url
-     SUPABASE_KEY=your_supabase_anon_key
-     GROK_API_KEY=your_grok_api_key
-     ```
-   - Run `npm install` and `npm start`.
-
-3. **Frontend Setup:**
-   - Go to `frontend/`
-   - Run `npm install` and `npm run dev`.
-
-## 🛡️ Security
-Secured by Quantum Encryption protocols and Neural Sync authentication.
+> AI-powered gamified competitive exam preparation platform
 
 ---
-© 2026 **Tech Titans** | Built with ⚡ for the Hackathon.
+
+## 📁 Project Structure
+
+```
+Rank_rise_ai/
+├── backend/          → Node.js + Express API  → Deploy on Railway
+│   ├── server.js
+│   ├── routes/
+│   ├── controllers/
+│   ├── middleware/
+│   ├── config/
+│   ├── utils/
+│   ├── Procfile
+│   ├── railway.toml
+│   └── package.json
+│
+├── frontend/         → React + Vite App       → Deploy on Vercel
+│   ├── src/
+│   ├── index.html
+│   ├── vite.config.js
+│   ├── vercel.json
+│   └── package.json
+│
+├── .gitignore
+└── package.json      → Local dev only (concurrently)
+```
+
+---
+
+## 🛠️ Local Development
+
+```bash
+# 1. Install all dependencies
+npm run install:all
+
+# 2. Add your environment variables:
+#    backend/.env  → PORT, SUPABASE_URL, SUPABASE_KEY, GROQ_API_KEY
+#    frontend/.env → VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL
+
+# 3. Run both servers simultaneously
+npm run dev
+```
+
+Frontend: http://localhost:3000  
+Backend:  http://localhost:5000
+
+---
+
+## 🌐 Deployment
+
+### Backend → Railway
+
+1. Go to [Railway.app](https://railway.app) → New Project → Deploy from GitHub
+2. Select **only the `backend/` folder** as root directory (or set root in Railway settings)
+3. Set these environment variables in Railway dashboard:
+   - `PORT` = `5000`
+   - `SUPABASE_URL`
+   - `SUPABASE_KEY`
+   - `GROQ_API_KEY`
+   - `FRONTEND_URL` = your Vercel URL (e.g. `https://rankrise.vercel.app`)
+4. Railway auto-detects `railway.toml` → starts with `node server.js`
+
+### Frontend → Vercel
+
+1. Go to [Vercel.com](https://vercel.com) → New Project → Import from GitHub
+2. Set **Root Directory** to `frontend`
+3. Framework: `Vite`
+4. Set these environment variables in Vercel dashboard:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_API_URL` = your Railway backend URL (e.g. `https://rankrise-backend.up.railway.app`)
+5. Deploy!
+
+---
+
+## ⚙️ Environment Variables
+
+### `backend/.env` (never commit this!)
+```env
+PORT=5000
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+GROQ_API_KEY=your_groq_key
+FRONTEND_URL=http://localhost:3000
+```
+
+### `frontend/.env` (never commit this!)
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_API_URL=http://localhost:5000
+```
+
+---
+
+## 🧰 Tech Stack
+
+| Layer    | Technology                        |
+|----------|-----------------------------------|
+| Frontend | React 18, Vite, TailwindCSS       |
+| Backend  | Node.js, Express.js               |
+| Database | Supabase (PostgreSQL)             |
+| AI       | Groq SDK (LLaMA 3)                |
+| Auth     | Supabase Auth + JWT               |
+| Deploy   | Vercel (frontend) + Railway (backend) |

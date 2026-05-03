@@ -3,11 +3,10 @@ frontend/node_modules/
 backend/node_modules/
 .env
 .env.local
-dist/
-build/
 .DS_Store
 *.log
 graphify-out/
 .agents/
 .vscode/
 *.zip
+scratch/
